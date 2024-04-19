@@ -2,6 +2,8 @@ import tkinter as tk
 from tkinter import messagebox, ttk;
 from PIL import Image, ImageTk
 
+import mysql.connector
+
 # import created library
 from command import Command as cmd
 
@@ -47,9 +49,10 @@ def img_frame(master, frame_width, img_url):
 def login_user_account():
   widget_font = 'Tahoma'
   widget_width = 40
-  img_url = '/home/orden/Desktop/projects/appointment/gui/asset/account_bg.jpg'
+  img_url = 'asset/account_bg.jpg'
 
   # frame that contains the other frames
+  create_frame.forget()
   login_container.pack()
 
   # frame that holds the image
@@ -110,13 +113,28 @@ def validate_create_account(value_arr):
       messagebox.showerror('Empty Form', f'All inputs field must be filled: {value[0]}')
       return ''
     
-  login_user_account()
+  connect = mysql.connector.connect(host='localhost', password='', user='root', database='hospital_patient_data')
+  cursor = connect.cursor()
 
+  try:
+    if not(connect.is_connected()): return
+
+    create_table = 'CREATE TABLE IF NOT EXISTS user(id_key INT PRIMARY KEY AUTO_INCREMENT, first_name TEXT, last_name TEXT, sex TEXT, address TEXT, state TEXT, marital_status TEXT, blood_group TEXT, genotype TEXT, password TEXT, mail TEXT)'
+    cursor.execute(create_table)
+
+    login_user_account()
+
+  except mysql.ConnectionError as e:
+    messagebox.showerror('connection error', f'There is an error connectng to the database {e}')
+    
+  finally:
+    cursor.close()
+    connect.commit()
 
 
 # create user account frame
 def create_user_account():
-  img_url = '/home/orden/Desktop/projects/appointment/gui/asset/account_bg.jpg'
+  img_url = 'asset/account_bg.jpg'
   widget_width = 29
   combo_width = 28
 
@@ -134,7 +152,7 @@ def create_user_account():
   container = tk.Frame(user_frame, width=frame_width, bg=user_frame['bg'])
   container.pack(expand=True, anchor='center')
 
-  label_firstname = tk.Label(container, text="First Name", bg=user_frame['bg'], width=widget_width, font='Tahoma')
+  label_firstname = tk.Label(container, text="First Name", bg=user_frame['bg'], width=widget_width, font='Tahoma', padx=10)
   entry_firstname = tk.Entry(container, width=widget_width, font='Tahoma')
 
   label_firstname.grid(row=1, column=0)
