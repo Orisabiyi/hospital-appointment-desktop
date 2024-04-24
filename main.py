@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import messagebox, ttk;
+from tkinter import messagebox, filedialog, ttk;
 from PIL import Image, ImageTk
 
 import mysql.connector
@@ -98,15 +98,23 @@ def validate_create_account(value_arr):
       return ''
 
     if value[0] == 'marital' and not(value[1] == 'Single' or value[1] == 'Married' or value[1] == 'Divorce'):
-      messagebox.showerror('Fill the sex entry', 'Choose an option of Single, Married or Divorced from the dropdown')
+      messagebox.showerror('Fill the marital entry', 'Choose an option of Single, Married or Divorced from the dropdown')
       return ''
 
     if value[0] == 'bloodgroup' and not(value[1] == 'O+' or value[1] == 'O-' or value[1] == 'AB' or value[1] == 'AB+'):
-      messagebox.showerror('Fill the sex entry', 'Choose an option of O+, O-, AB+ or AB- from the dropdown')
+      messagebox.showerror('Fill the blood group entry', 'Choose an option of O+, O-, AB+ or AB- from the dropdown')
       return ''
     
     if value[0] == 'genotype' and not(value[1] == 'AA' or value[1] == 'AS' or value[1] == 'SS'):
-      messagebox.showerror('Fill the sex entry', 'Choose an option of AA, AS, or SS from the dropdown')
+      messagebox.showerror('Fill the genotype entry', 'Choose an option of AA, AS, or SS from the dropdown')
+      return ''
+    
+    if value[0] == 'password' and value[1] == '':
+      messagebox.showerror('Fill the password entry', 'Please provide a password')
+      return ''
+    
+    if value[0] == 'confirm_password' and value[1] == '':
+      messagebox.showerror('Fill the confirm password entry', 'Please confirm your password')
       return ''
     
     if value[1] == '':
@@ -130,6 +138,7 @@ def validate_create_account(value_arr):
   finally:
     cursor.close()
     connect.commit()
+
 
 
 # create user account frame
@@ -200,20 +209,36 @@ def create_user_account():
   label_genotype.grid(row=7, column=1)
   entry_genotype.grid(row=8, column=1)
 
-  label_password = tk.Label(container, text='password', bg=user_frame['bg'], width=widget_width, font='Tahoma')
+  label_password = tk.Label(container, text='Password', bg=user_frame['bg'], width=widget_width, font='Tahoma')
   entry_password = tk.Entry(container, width=widget_width, font='Tahoma')
 
   label_password.grid(row=9, column=0)
   entry_password.grid(row=10, column=0)
 
+  label_confirm = tk.Label(container, text='Confirm Password', bg=user_frame['bg'], width=widget_width, font='Tahoma')
+  entry_confirm = tk.Entry(container, width=widget_width, font='Tahoma')
+
+  label_confirm.grid(row=9, column=1)
+  entry_confirm.grid(row=10, column=1)
+
   label_mail = tk.Label(container, text='Email', bg=user_frame['bg'], width=widget_width, font='Tahoma')
   entry_mail = tk.Entry(container, width=widget_width, font='Tahoma')
 
-  label_mail.grid(row=9, column=1)
-  entry_mail.grid(row=10, column=1)
+  label_mail.grid(row=11, column=0)
+  entry_mail.grid(row=12, column=0)
+
+  def upload_picture(event=None):
+    global profile_img
+    filename = filedialog.askopenfilename()
+    profile_img = ImageTk.PhotoImage(file=filename)
+    label = tk.Label(container, image=profile_img)
+    label.grid(row=11, column=1)
+
+  btn_upload = tk.Button(container, text='Upload your profile pcture', command=upload_picture)
+  btn_upload.grid(row=12, column=1)
 
   user_value = lambda: validate_create_account([
-    ['firstname', entry_firstname.get()], ['lastname', entry_lastname.get()], ['sex', entry_sex.get()], ['address', entry_adress.get()], ['state', entry_state.get()], ['marital', entry_marital.get()], ['bloodgroup', entry_group.get()], ['genotype', entry_genotype.get()], ['password', entry_password.get()], ['mail', entry_mail.get()]
+    ['firstname', entry_firstname.get()], ['lastname', entry_lastname.get()], ['sex', entry_sex.get()], ['address', entry_adress.get()], ['state', entry_state.get()], ['marital', entry_marital.get()], ['bloodgroup', entry_group.get()], ['genotype', entry_genotype.get()], ['password', entry_password.get()], ['confirm_password', entry_confirm.get()], ['mail', entry_mail.get()]
     ])
 
   # the submit button, it get all of the user input for validation
@@ -221,16 +246,22 @@ def create_user_account():
   activebackground='blue', activeforeground=user_frame['bg'], width=75, pady=15,
   command=user_value)
   
-  submit_btn.grid(row=11, column=0, columnspan=2)
+  submit_btn.grid(row=13, column=0, columnspan=2)
 
   login_btn = tk.Button(container, text='If you already have an account. Login existing account', bg=user_frame['bg'], activebackground=user_frame['bg'], highlightthickness=0, borderwidth=0, command=lambda: cmd.show_frame(create_frame, login_user_account))
-  login_btn.grid(row=12, column=0, columnspan=2)
+  login_btn.grid(row=14, column=0, columnspan=2)
 
 
   for widget in container.winfo_children():
-    widget.grid_configure(padx=10, pady=10)
+    widget.grid_configure(padx=5, pady=5)
 
 
-create_user_account()
+# create_user_account()
+
+def patient_window():
+  main_frame = tk.Frame(root, bg='#fff', width=width, height=height)
+  main_frame.pack()
+
+patient_window()
 
 root.mainloop()
