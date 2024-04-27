@@ -3,6 +3,7 @@ from tkinter import messagebox, filedialog, ttk;
 from PIL import Image, ImageTk, ImageDraw
 
 import mysql.connector
+from mysql.connector import Error
 
 # import created library
 from command import Command as cmd
@@ -85,63 +86,111 @@ def login_user_account():
   create_account_btn = tk.Button(container, text='If you have no existing account. Create account', bg=login_frameholder['bg'], activebackground=login_frameholder['bg'], border=0, highlightthickness=0, font=roboto_font, command=lambda: cmd.show_frame(login_container, create_user_account))
   create_account_btn.grid(row=5, column=0)
 
+  try:
+    connect = mysql.connector.connect(host='localhost', password='', user='root', database='hospital_patient_data')
+    cursor = connect.cursor()
+
+    get_user = '''
+    SELECT * FROM user
+    WHERE mail = %s AND password = %s
+    '''
+    mail = entry_mail.get().strip()
+    password = entry_password.get().strip()
+    user = (mail, password)
+
+    cursor.execute(get_user, user)
+
+    user_data = cursor.fetchall()
+
+    if user_data:
+      print('User data', user_data)
+
+
+  except Error as e:
+    print('Error:', e)
+
+  finally:
+    if connect.is_connected():
+      cursor.close()
+      connect.close()
+
 
   for widget in container.winfo_children():
     widget.grid_configure(padx=15, pady=15)
 
 
 
-# validate user input
 def validate_create_account(value_arr):
   values = value_arr
+
+  global confirm_pwd
+  global pwd
+  confirm_pwd = ''
+  pwd = ''
+
   for value in values:
-    if value[0] == 'sex' and not(value[1] == 'Male' or value[1] == 'Female') :
+    if value[0] == 'sex' and not (value[1] == 'Male' or value[1] == 'Female'):
       messagebox.showerror('Fill the sex entry', 'Choose an option of Male or Female from the dropdown')
       return ''
-
-    if value[0] == 'marital' and not(value[1] == 'Single' or value[1] == 'Married' or value[1] == 'Divorce'):
+      
+    if value[0] == 'marital' and not (value[1] == 'Single' or value[1] == 'Married' or value[1] == 'Divorce'):
       messagebox.showerror('Fill the marital entry', 'Choose an option of Single, Married or Divorced from the dropdown')
       return ''
-
-    if value[0] == 'bloodgroup' and not(value[1] == 'O+' or value[1] == 'O-' or value[1] == 'AB' or value[1] == 'AB+'):
+    
+    if value[0] == 'bloodgroup' and not (value[1] == 'O+' or value[1] == 'O-' or value[1] == 'AB' or value[1] == 'AB+'):
       messagebox.showerror('Fill the blood group entry', 'Choose an option of O+, O-, AB+ or AB- from the dropdown')
       return ''
     
-    if value[0] == 'genotype' and not(value[1] == 'AA' or value[1] == 'AS' or value[1] == 'SS'):
+    if value[0] == 'genotype' and not (value[1] == 'AA' or value[1] == 'AS' or value[1] == 'SS'):
       messagebox.showerror('Fill the genotype entry', 'Choose an option of AA, AS, or SS from the dropdown')
       return ''
     
-    if value[0] == 'password' and value[1] == '':
-      messagebox.showerror('Fill the password entry', 'Please provide a password')
-      return ''
-    
-    if value[0] == 'confirm_password' and value[1] == '':
-      messagebox.showerror('Fill the confirm password entry', 'Please confirm your password')
-      return ''
+    if value[0] == 'password':
+      pwd = value[1]
+      
+    if value[0] == 'confirm_password':
+      confirm_pwd = value[1]
     
     if value[1] == '':
       messagebox.showerror('Empty Form', f'All inputs field must be filled: {value[0]}')
       return ''
-    
-  connect = mysql.connector.connect(host='localhost', password='', user='root', database='hospital_patient_data')
-  cursor = connect.cursor()
+      
+  if not(pwd == confirm_pwd):
+    messagebox.showerror('Password Mismatch', 'The password and confirm password do not match.')
+    return ''
 
   try:
-    if not(connect.is_connected()): return
+    connect = mysql.connector.connect(host='localhost', password='', user='root', database='hospital_patient_data')
+    cursor = connect.cursor()
 
-    create_table = 'CREATE TABLE IF NOT EXISTS user(id_key INT PRIMARY KEY AUTO_INCREMENT, first_name TEXT, last_name TEXT, sex TEXT, address TEXT, state TEXT, marital_status TEXT, blood_group TEXT, genotype TEXT, password TEXT, mail TEXT)'
+    # CREATE TABLE
+    create_table = 'CREATE TABLE IF NOT EXISTS user(id_key INT PRIMARY KEY AUTO_INCREMENT, first_name TEXT, last_name TEXT, username TEXT, sex TEXT, address TEXT, state TEXT, marital_status TEXT, blood_group TEXT, genotype TEXT, password TEXT, mail TEXT)'
     cursor.execute(create_table)
+
+    # Insert User
+    insert_user = ''' insert into user(first_name, last_name, username, sex, address, state, marital_status, blood_group, genotype, password, mail) values(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+    '''
+
+    user_data = []
+    for value in value_arr:
+      user_data.append(value[1])
+
+    user_data.pop(-3)
+    tuple(user_data)
+    print(user_data)
+
+    cursor.execute(insert_user, user_data)
+    connect.commit()
 
     login_user_account()
 
-  except mysql.ConnectionError as e:
+  except Error as e:
     messagebox.showerror('connection error', f'There is an error connectng to the database {e}')
     
   finally:
-    cursor.close()
-    connect.commit()
-
-
+   if connect.is_connected():
+     connect.close()
+     cursor.close()
 
 # create user account frame
 def create_user_account():
@@ -175,7 +224,6 @@ def create_user_account():
   label_lastname.grid(row=1, column=1)
   entry_lastname.grid(row=2, column=1)
 
-  global entry_username
   label_username = tk.Label(container, text='Username', bg=user_frame['bg'], width=widget_width, font=roboto_font)
   entry_username = tk.Entry(container, width=widget_width, font=roboto_font)
 
@@ -218,23 +266,23 @@ def create_user_account():
   label_genotype.grid(row=9, column=0)
   entry_genotype.grid(row=10, column=0)
 
-  label_password = tk.Label(container, text='Email', bg=user_frame['bg'], width=widget_width, font=roboto_font)
-  entry_password = tk.Entry(container, width=widget_width, font=roboto_font)
-
-  label_password.grid(row=9, column=1)
-  entry_password.grid(row=10, column=1)
-
-  label_confirm = tk.Label(container, text='Password', bg=user_frame['bg'], width=widget_width, font=roboto_font)
-  entry_confirm = tk.Entry(container, width=widget_width, font=roboto_font)
-
-  label_confirm.grid(row=11, column=0)
-  entry_confirm.grid(row=12, column=0)
-
-  label_mail = tk.Label(container, text='Confirm Password', bg=user_frame['bg'], width=widget_width, font=roboto_font)
+  label_mail = tk.Label(container, text='Email', bg=user_frame['bg'], width=widget_width, font=roboto_font)
   entry_mail = tk.Entry(container, width=widget_width, font=roboto_font)
 
-  label_mail.grid(row=11, column=1)
-  entry_mail.grid(row=12, column=1)
+  label_mail.grid(row=9, column=1)
+  entry_mail.grid(row=10, column=1)
+
+  label_password = tk.Label(container, text='Password', bg=user_frame['bg'], width=widget_width, font=roboto_font)
+  entry_password = tk.Entry(container, width=widget_width, font=roboto_font)
+
+  label_password.grid(row=11, column=0)
+  entry_password.grid(row=12, column=0)
+
+  label_confirm = tk.Label(container, text='Confirm Password', bg=user_frame['bg'], width=widget_width, font=roboto_font)
+  entry_confirm = tk.Entry(container, width=widget_width, font=roboto_font)
+
+  label_confirm.grid(row=11, column=1)
+  entry_confirm.grid(row=12, column=1)
 
   # def upload_picture(event=None):
   #   global profile_img
@@ -244,8 +292,7 @@ def create_user_account():
   #   label.grid(row=11, column=1)
 
   user_value = lambda: validate_create_account([
-    ['firstname', entry_firstname.get()], ['lastname', entry_lastname.get()], ['sex', entry_sex.get()], ['address', entry_adress.get()], ['state', entry_state.get()], ['marital', entry_marital.get()], ['bloodgroup', entry_group.get()], ['genotype', entry_genotype.get()], ['password', entry_password.get()], ['confirm_password', entry_confirm.get()], ['mail', entry_mail.get()], 
-    ['username', entry_username.get()]
+    ['firstname', entry_firstname.get()], ['lastname', entry_lastname.get()], ['username', entry_username.get()], ['sex', entry_sex.get()], ['address', entry_adress.get()], ['state', entry_state.get()], ['marital', entry_marital.get()], ['bloodgroup', entry_group.get()], ['genotype', entry_genotype.get()], ['password', entry_password.get()], ['confirm_password', entry_confirm.get()], ['mail', entry_mail.get()]
     ])
 
   # the submit button, it get all of the user input for validation
@@ -355,8 +402,6 @@ def patient_window():
 
   label_welcome = tk.Label(welcome_frame, text=f'Welcome Orisabiyi, so good to have you here', bg=bg_color, font=roboto_font)
   label_welcome.pack(anchor='center')
-
-
 
 
 
