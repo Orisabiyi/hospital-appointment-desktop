@@ -8,28 +8,90 @@ from mysql.connector import Error
 # import created library
 from command import Command as cmd
 
-# creating root window
-root = tk.Tk()
-
-# window dimension
-width = root.winfo_screenwidth()
-height = root.winfo_screenheight()
-custom_size = str(width) + 'x' + str(height)
-root.geometry(custom_size)
-
-root.resizable(False, False)
-root.title('MediCare')
-
-# frame dimension
-frame_width = width * .5
-image_tk = None
-
-# container frame
-create_frame = tk.Frame(root, width=width, height=height)
-login_container = tk.Frame(root, width=width, height=height)
-
 # fonts
 roboto_font = ('roboto', 12)
+
+def main():
+  # creating root window
+  global root
+  root = tk.Tk()
+
+  # window dimension
+  global width
+  width = root.winfo_screenwidth()
+
+  global height
+  height = root.winfo_screenheight()
+
+  custom_size = str(width) + 'x' + str(height)
+  root.geometry(custom_size)
+
+  root.resizable(False, False)
+  root.title('MediCare')
+
+  # frame dimension
+  global frame_width
+  frame_width = width * .5
+
+  global image_tk
+  image_tk = None
+
+  # entry point
+  create_user_account()
+
+
+def validate_login():
+  try:
+    connect = mysql.connector.connect(host='localhost', password='', user='root', database='hospital_patient_data')
+    cursor = connect.cursor()
+
+    get_user = '''
+    SELECT * FROM user
+    WHERE mail = %s AND password = %s
+    '''
+    mail = entry_mail.get().strip()
+    password = entry_password.get().strip()
+    user = (mail, password)
+
+    cursor.execute(get_user, user)
+
+    user_data = cursor.fetchall()
+
+    if user_data:
+      global user_data_list
+      user_data_list = list(user_data[0])
+      messagebox.showinfo('User data', 'You have login Successfully')
+      
+      global cur_user
+      cur_user = {
+      'key': user_data_list[0],
+      'first_name': user_data_list[1],
+      'last_name': user_data_list[2],
+      'user_name': user_data_list[3],
+      'sex': user_data_list[4],
+      'address': user_data_list[5],
+      'state': user_data_list[6],
+      'marital_status': user_data_list[7],
+      'blood_group': user_data_list[8],
+      'genotype': user_data_list[9],
+      'password': user_data_list[10],
+      'mail': user_data_list[11],
+    }
+      
+    else:
+      messagebox.showerror('User Data', 'NO user data found. Enter correct email or password')
+      return ''
+    
+  except Error as e:
+    print('Error:', e)
+
+  finally:
+    if connect.is_connected():
+      cursor.close()
+      connect.close()
+
+  login_container.forget()
+  patient_window()
 
 
 # the main container frame and image frame
@@ -56,6 +118,9 @@ def login_user_account():
 
   # frame that contains the other frames
   create_frame.forget()
+
+  global login_container
+  login_container = tk.Frame(root, width=width, height=height)
   login_container.pack()
 
   # frame that holds the image
@@ -69,50 +134,24 @@ def login_user_account():
   container.pack(expand=True, anchor='center')
 
   label_mail = tk.Label(container, text='Email', bg=login_frameholder['bg'], font=roboto_font)
+  global entry_mail
   entry_mail = tk.Entry(container, width=widget_width, highlightthickness=0, font=roboto_font)
 
   label_mail.grid(row=0, column=0)
   entry_mail.grid(row=1, column=0)
 
   label_password = tk.Label(container, text='Password', bg=login_frameholder['bg'], font=roboto_font)
+  global entry_password
   entry_password = tk.Entry(container, width=widget_width, highlightthickness=0, font=roboto_font)
 
   label_password.grid(row=2, column=0)
   entry_password.grid(row=3, column=0)
 
-  submit_btn = tk.Button(container, text='Login', width=39, padx=10, pady=10, bg='blue', fg='#fff', activebackground='blue', activeforeground='#fff', border=0, highlightthickness=0, font=roboto_font)
+  submit_btn = tk.Button(container, text='Login', width=39, padx=10, pady=10, bg='blue', fg='#fff', activebackground='blue', activeforeground='#fff', border=0, highlightthickness=0, font=roboto_font, command=lambda: validate_login())
   submit_btn.grid(row=4, column=0)
 
   create_account_btn = tk.Button(container, text='If you have no existing account. Create account', bg=login_frameholder['bg'], activebackground=login_frameholder['bg'], border=0, highlightthickness=0, font=roboto_font, command=lambda: cmd.show_frame(login_container, create_user_account))
   create_account_btn.grid(row=5, column=0)
-
-  try:
-    connect = mysql.connector.connect(host='localhost', password='', user='root', database='hospital_patient_data')
-    cursor = connect.cursor()
-
-    get_user = '''
-    SELECT * FROM user
-    WHERE mail = %s AND password = %s
-    '''
-    mail = entry_mail.get().strip()
-    password = entry_password.get().strip()
-    user = (mail, password)
-
-    cursor.execute(get_user, user)
-
-    user_data = cursor.fetchall()
-
-    if user_data:
-      print('User data', user_data)
-
-
-  except Error as e:
-    print('Error:', e)
-
-  finally:
-    if connect.is_connected():
-      cursor.close()
-      connect.close()
 
 
   for widget in container.winfo_children():
@@ -199,6 +238,8 @@ def create_user_account():
   combo_width = 28
 
   # frame that contains the other frames
+  global create_frame
+  create_frame = tk.Frame(root, width=width, height=height)
   create_frame.pack()
 
   # frame the holds the image
@@ -347,10 +388,63 @@ def create_circle_with_image(canvas, canvas_width, canvas_height, r, image_path)
     return image_tk
 
 
+def schedule_appointment():
+  bg_color = '#fff'
+  schedule_frame = tk.Frame(dashboard_main, bg=dashboard_main['bg'], width=dashboard_main['width'], height=dashboard_main['height'])
+  schedule_frame.place(relx=0.5, rely=0.5, anchor='center')
+  schedule_frame.propagate(flag=False)
+
+  label_title = tk.Label(schedule_frame, text='Schedule Appointment', bg=bg_color)
+  label_title.pack()
+
+def display_appointment():
+  bg_color = '#fff'
+  schedule_frame = tk.Frame(dashboard_main, bg=dashboard_main['bg'], width=dashboard_main['width'], height=dashboard_main['height'])
+  schedule_frame.place(relx=0.5, rely=0.5, anchor='center')
+  schedule_frame.propagate(flag=False)
+
+  label_title = tk.Label(schedule_frame, text='My Appointments', bg=bg_color)
+  label_title.pack()
+
+def display_medical_records():
+  bg_color = '#fff'
+  
+  schedule_frame = tk.Frame(dashboard_main, bg=dashboard_main['bg'], width=dashboard_main['width'], height=dashboard_main['height'])
+  schedule_frame.place(relx=0.5, rely=0.5, anchor='center')
+  schedule_frame.propagate(flag=False)
+
+  # past medical history frame
+  past_history_frame = tk.Frame(schedule_frame, bg='#FFFEFE', width=dashboard_main['width'], height=200)
+  past_history_frame.pack_propagate(flag=False)
+  past_history_frame.pack()
+
+  label_history_title = tk.Label(past_history_frame, text='Past Medical History', bg=bg_color)
+  label_history_title.pack()
+
+  label_instruction = tk.Label(past_history_frame, text='Kindly check the boxes that apply to you', bg=bg_color)
+  label_instruction.pack()
+
+  hypertension_check = tk.Checkbutton(past_history_frame, text='Hypertension', background=bg_color, highlightthickness=0)
+  hypertension_check.pack()
+
+
+  for child_item in schedule_frame.winfo_children():
+    child_item.pack_configure(padx=10, pady=10)
+
+
+def display_profile():
+  bg_color = '#fff'
+  schedule_frame = tk.Frame(dashboard_main, bg=dashboard_main['bg'], width=dashboard_main['width'], height=dashboard_main['height'])
+  schedule_frame.place(relx=0.5, rely=0.5, anchor='center')
+  schedule_frame.propagate(flag=False)
+
+  label_title = tk.Label(schedule_frame, text='Profile Settings', bg=bg_color)
+  label_title.pack()
+
 def patient_window():
   bg_color = '#fff'
-  btn_color = '#B22222'
-  btn_hover = '#DC143C'
+  btn_color = '#12548A'
+  btn_hover = '#2B6BA0'
 
   nav_width = width  * 0.3
   main_width = width * 0.7
@@ -366,11 +460,11 @@ def patient_window():
   dashboard_frame.pack()
 
   # the navigation part
-  dashboard_navigation = tk.Frame(dashboard_frame, bg='#4682B4', width=nav_width, height=height, pady=50)
+  dashboard_navigation = tk.Frame(dashboard_frame, bg='#9CC3E4', width=nav_width, height=height, pady=50)
   dashboard_navigation.place(x=0, y=0)
   dashboard_navigation.pack_propagate(flag=False)
 
-  canvas = tk.Canvas(dashboard_navigation, width=canvas_width, height=canvas_height, bg="#4682B4", highlightthickness=0)
+  canvas = tk.Canvas(dashboard_navigation, width=canvas_width, height=canvas_height, bg="#9CC3E4", highlightthickness=0)
   canvas.pack()
 
   # Draw a circle with an image at the center
@@ -378,33 +472,34 @@ def patient_window():
   image_tk = create_circle_with_image(canvas, canvas_width, canvas_height, radius, image_path)
 
   # dashboard navigation widget
-  btn_schedule = tk.Button(dashboard_navigation, text='Schedule Appointment', width=btn_width, fg=bg_color, bg=btn_color, highlightbackground=btn_color, highlightcolor=btn_color, activebackground=btn_hover, activeforeground=bg_color, pady=btn_padh, font=roboto_font)
+  btn_schedule = tk.Button(dashboard_navigation, text='Schedule Appointment', width=btn_width, fg=bg_color, bg=btn_color, highlightbackground=btn_color, highlightcolor=btn_color, activebackground=btn_hover, activeforeground=bg_color, pady=btn_padh, font=roboto_font, command=lambda: schedule_appointment())
   btn_schedule.pack()
 
-  btn_appointment = tk.Button(dashboard_navigation, text='My Appointments', width=btn_width, fg=bg_color, bg=btn_color, highlightbackground=btn_color, highlightcolor=btn_color, activebackground=btn_hover, activeforeground=bg_color, pady=btn_padh, font=roboto_font)
+  btn_appointment = tk.Button(dashboard_navigation, text='My Appointments', width=btn_width, fg=bg_color, bg=btn_color, highlightbackground=btn_color, highlightcolor=btn_color, activebackground=btn_hover, activeforeground=bg_color, pady=btn_padh, font=roboto_font, command=lambda: display_appointment())
   btn_appointment.pack()
 
-  btn_records = tk.Button(dashboard_navigation, text='Medical Records', width=btn_width, fg=bg_color, bg=btn_color, highlightbackground=btn_color, highlightcolor=btn_color, activebackground=btn_hover, activeforeground=bg_color, pady=btn_padh, font=roboto_font)
+  btn_records = tk.Button(dashboard_navigation, text='Medical Records', width=btn_width, fg=bg_color, bg=btn_color, highlightbackground=btn_color, highlightcolor=btn_color, activebackground=btn_hover, activeforeground=bg_color, pady=btn_padh, font=roboto_font, command=lambda: display_medical_records())
   btn_records.pack()
 
-  btn_profile = tk.Button(dashboard_navigation, text='Profile Settings', width=btn_width, fg=bg_color, bg=btn_color, highlightbackground=btn_color, highlightcolor=btn_color, activebackground=btn_hover, activeforeground=bg_color, pady=btn_padh, font=roboto_font)
+  btn_profile = tk.Button(dashboard_navigation, text='Profile Settings', width=btn_width, fg=bg_color, bg=btn_color, highlightbackground=btn_color, highlightcolor=btn_color, activebackground=btn_hover, activeforeground=bg_color, pady=btn_padh, font=roboto_font, command=lambda: display_profile())
   btn_profile.pack()
 
   for widget in dashboard_navigation.winfo_children():
     widget.pack_configure(pady=20)
 
   # view
+  global dashboard_main
   dashboard_main = tk.Frame(dashboard_frame, bg=bg_color, width=main_width, height=height)
   dashboard_main.place(x=nav_width, y=0)
 
   welcome_frame = tk.Frame(dashboard_main, bg=bg_color)
   welcome_frame.place(relx=0.5, rely=0.5, anchor='center')
 
-  label_welcome = tk.Label(welcome_frame, text=f'Welcome Orisabiyi, so good to have you here', bg=bg_color, font=roboto_font)
+  cur_user_name = cur_user.get('user_name')
+
+  label_welcome = tk.Label(welcome_frame, text=f'Welcome {cur_user_name.upper()}, so good to have you here. \n {cur_user_name.upper()}, you can schedule an appointment right now', bg=bg_color, font=roboto_font)
   label_welcome.pack(anchor='center')
 
 
-
-patient_window()
-
+main()
 root.mainloop()
