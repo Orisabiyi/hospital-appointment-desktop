@@ -9,7 +9,7 @@ from mysql.connector import Error
 from command import Command as cmd
 
 # fonts
-roboto_font = ('roboto', 12)
+roboto_font = ("Roboto", 12, "normal")
 
 def main():
   # creating root window
@@ -390,12 +390,90 @@ def create_circle_with_image(canvas, canvas_width, canvas_height, r, image_path)
 
 def schedule_appointment():
   bg_color = '#fff'
-  schedule_frame = tk.Frame(dashboard_main, bg=dashboard_main['bg'], width=dashboard_main['width'], height=dashboard_main['height'])
+  entry_width = 30
+
+  schedule_frame = tk.Frame(dashboard_main, bg=dashboard_main['bg'], width=dashboard_main['width'], height=dashboard_main['height'], padx=40, pady=10)
   schedule_frame.place(relx=0.5, rely=0.5, anchor='center')
   schedule_frame.propagate(flag=False)
 
-  label_title = tk.Label(schedule_frame, text='Schedule Appointment', bg=bg_color)
+  # appointment frame
+  appointment_frame = tk.Frame(schedule_frame, bg=bg_color)
+  appointment_frame.pack()
+
+  label_title = tk.Label(appointment_frame, text='Schedule an Appointment', bg=bg_color, font=('roboto', 16, 'bold'), justify='center')
   label_title.pack()
+
+
+  # user personal details
+  personal_info_frame = tk.Frame(schedule_frame, bg=bg_color)
+  personal_info_frame.pack(anchor='w')
+
+  instruction = '''
+  Please fill out the following form to schedule your appointment.
+  Ensure all required fields are completed accurately.
+  '''
+  label_instruction = tk.Label(personal_info_frame, text=instruction, bg=bg_color, justify='left')
+  label_instruction.grid(column=0, row=0, columnspan=4)
+
+  label_name = tk.Label(personal_info_frame, text='Full Name', bg=bg_color, justify='left', anchor='w')
+  label_name.grid(column=0, row=1)
+
+  entry_name = tk.Entry(personal_info_frame, bg=bg_color, width=entry_width)
+  entry_name.grid(column=1, row=1)
+
+  label_age = tk.Label(personal_info_frame, text='Age', bg=bg_color, justify='left', anchor='w')
+  label_age.grid(column=3, row=1)
+
+  entry_age = tk.Entry(personal_info_frame, bg=bg_color, width=entry_width)
+  entry_age.grid(column=4, row=1)
+
+  label_msg = tk.Label(personal_info_frame, text='Email', bg=bg_color, justify='left', anchor='w')
+  label_msg.grid(column=0, row=2)
+
+  entry_msg = tk.Entry(personal_info_frame, bg=bg_color, width=entry_width)
+  entry_msg.grid(column=1, row=2)
+
+  label_phone = tk.Label(personal_info_frame, text='Phone Number', bg=bg_color, justify='left', anchor='w')
+  label_phone.grid(column=3, row=2)
+
+  entry_phone = tk.Entry(personal_info_frame, bg=bg_color, width=entry_width)
+  entry_phone.grid(column=4, row=2)
+
+  # clinic section
+  clinic_frame = tk.Frame(schedule_frame, bg=bg_color, pady=20)
+  clinic_frame.pack(anchor='w')
+
+  label_appointment_details = tk.Label(clinic_frame, bg=bg_color, text='Appointment Details', font=('roboto', 16, 'normal'), anchor='w')
+  label_appointment_details.grid(row=0, column=0, columnspan=4)
+
+  label_appointment_type = tk.Label(clinic_frame, bg=bg_color, text='Appointment Type')
+  label_appointment_type.grid(row=1, column=0)
+
+  entry_appointment_type = ttk.Combobox(clinic_frame, value=['General Consultation', 'Specialist Visit', 'TeleHealth Consultation', 'Lab Test/Imaging'], width=entry_width)
+  entry_appointment_type.grid(row=1, column=1)
+
+  label_appointment_date = tk.Label(clinic_frame, bg=bg_color, text='Appointment Date')
+  label_appointment_date.grid(row=1, column=2)
+
+  entry_appointment_time = ttk.Combobox(clinic_frame, value=['8:00 a.m. - 11:00 a.m.', '11:00 a.m. - 1:00 p.m.', '1:00 p.m. - 3:00 p.m.', '3:00 p.m. - 5:00 p.m.', '5:00 p.m. - 8:00 p.m.'], width=entry_width)
+  entry_appointment_time.grid(row=1, column=3)
+
+  # label_appointment_date = tk.Label(clinic_frame, bg=bg_color, text='')
+
+  label_preferred_notification = tk.Label(clinic_frame, bg=bg_color, text='Preferred Notification')
+  label_preferred_notification.grid(row=2, column=0)
+
+  entry_preferred_notification = ttk.Combobox(clinic_frame, value=['Email', 'SMS', 'Whatsapp'], width=entry_width)
+  entry_preferred_notification.grid(row=2, column=1)
+
+  schedule_appointment_button = tk.Button(schedule_frame, text='Confirm and Submit Schedule', bg=btn_color, activebackground=btn_hover, padx=10, pady=10)
+  schedule_appointment_button.pack()
+
+  for child in personal_info_frame.winfo_children():
+    child.grid_configure(padx=10, pady=5)
+
+  for child in clinic_frame.winfo_children():
+    child.grid_configure(padx=10, pady=5)
 
 def display_appointment():
   bg_color = '#fff'
@@ -414,22 +492,51 @@ def display_medical_records():
   schedule_frame.propagate(flag=False)
 
   # past medical history frame
-  past_history_frame = tk.Frame(schedule_frame, bg='#FFFEFE', width=dashboard_main['width'], height=200)
-  past_history_frame.pack_propagate(flag=False)
-  past_history_frame.pack()
+  past_history_frame = tk.Frame(schedule_frame, bg='#FFFEFE', width=dashboard_main['width'])
+  past_history_frame.pack(anchor='w')
 
-  label_history_title = tk.Label(past_history_frame, text='Past Medical History', bg=bg_color)
-  label_history_title.pack()
+  label_history_title = tk.Label(past_history_frame, text='PAST MEDICAL HISTORY', bg=bg_color, font=('Roboto', 14))
+  label_history_title.pack(anchor='w')
 
   label_instruction = tk.Label(past_history_frame, text='Kindly check the boxes that apply to you', bg=bg_color)
-  label_instruction.pack()
+  label_instruction.pack(anchor='w')
 
-  hypertension_check = tk.Checkbutton(past_history_frame, text='Hypertension', background=bg_color, highlightthickness=0)
-  hypertension_check.pack()
+  # child frame of past medical hstory
+  history_disease_frame = tk.Frame(past_history_frame, bg='#fff')
+  history_disease_frame.pack(anchor='w')
+
+  hypertension_check = tk.Checkbutton(history_disease_frame, text='Hypertension', background=bg_color, activebackground=bg_color, highlightthickness=0, font=roboto_font)
+  hypertension_check.grid(row=0, column=0)
+
+  epilepsy_check = tk.Checkbutton(history_disease_frame, text='Epilepsy', background=bg_color, activebackground=bg_color, highlightthickness=0, font=roboto_font)
+  epilepsy_check.grid(row=0, column=1)
+
+  asthma_check = tk.Checkbutton(history_disease_frame, text='Asthma', background=bg_color, activebackground=bg_color, highlightthickness=0, font=roboto_font)
+  asthma_check.grid(row=0, column=2)
+
+  diabetes_check = tk.Checkbutton(history_disease_frame, text='Diabetes', background=bg_color, activebackground=bg_color, highlightthickness=0, font=roboto_font)
+  diabetes_check.grid(row=0, column=3)
+
+  blood_check = tk.Checkbutton(history_disease_frame, text='Blood Transfusion', background=bg_color, activebackground=bg_color, highlightthickness=0, font=roboto_font)
+  blood_check.grid(row=0, column=3)
+
+
+  # surgical history
+  surgical_history_frame = tk.Frame(schedule_frame, bg='#FFFEFE', width=dashboard_main['width'])
+  surgical_history_frame.pack(anchor='w')
+
+  label_surgical_title = tk.Label(surgical_history_frame, text='SURGICAL HISTORY', bg=bg_color, font=('Roboto', 14))
+  label_surgical_title.pack(anchor='w')
+
+  label_instruction = tk.Label(surgical_history_frame, text='Kindly select yes or no from the dropdown', bg=bg_color)
+  label_instruction.pack(anchor='w')
 
 
   for child_item in schedule_frame.winfo_children():
-    child_item.pack_configure(padx=10, pady=10)
+    child_item.pack_configure(padx=30, pady=10)
+
+  for child_item in history_disease_frame.winfo_children():
+    child_item.grid_configure(padx=10, pady=10)
 
 
 def display_profile():
@@ -443,6 +550,7 @@ def display_profile():
 
 def patient_window():
   bg_color = '#fff'
+  global btn_color, btn_hover
   btn_color = '#12548A'
   btn_hover = '#2B6BA0'
 
