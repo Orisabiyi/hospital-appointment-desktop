@@ -1,3 +1,5 @@
+import tkinter as tk
+
 class Command:
   '''
   This class contains commands thaat can be used through the aid of button
@@ -10,6 +12,10 @@ class Command:
     # frame.destroy()
     func()
     destroy_frame.forget()
+  
+  def clear_input(objInput):
+    for key, values in objInput.items():
+      values.delete(0, tk.END)
 
 
 Command()

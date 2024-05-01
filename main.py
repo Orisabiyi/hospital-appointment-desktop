@@ -1,13 +1,19 @@
+import os
 import tkinter as tk
 from tkinter import messagebox, filedialog, ttk;
 from PIL import Image, ImageTk, ImageDraw
+
+import datetime
+import calendar
 
 import mysql.connector
 from mysql.connector import Error
 
 # import created library
 from command import Command as cmd
+import os
 
+# os.environ['']
 # fonts
 roboto_font = ("Roboto", 12, "normal")
 
@@ -392,7 +398,7 @@ def schedule_appointment():
   bg_color = '#fff'
   entry_width = 30
 
-  schedule_frame = tk.Frame(dashboard_main, bg=dashboard_main['bg'], width=dashboard_main['width'], height=dashboard_main['height'], padx=40, pady=10)
+  schedule_frame = tk.Frame(dashboard_main, bg=dashboard_main['bg'], width=dashboard_main['width'], height=dashboard_main['height'])
   schedule_frame.place(relx=0.5, rely=0.5, anchor='center')
   schedule_frame.propagate(flag=False)
 
@@ -452,13 +458,11 @@ def schedule_appointment():
   entry_appointment_type = ttk.Combobox(clinic_frame, value=['General Consultation', 'Specialist Visit', 'TeleHealth Consultation', 'Lab Test/Imaging'], width=entry_width)
   entry_appointment_type.grid(row=1, column=1)
 
-  label_appointment_date = tk.Label(clinic_frame, bg=bg_color, text='Appointment Date')
-  label_appointment_date.grid(row=1, column=2)
+  label_appointment_time = tk.Label(clinic_frame, bg=bg_color, text='Appointment Time')
+  label_appointment_time.grid(row=1, column=2)
 
   entry_appointment_time = ttk.Combobox(clinic_frame, value=['8:00 a.m. - 11:00 a.m.', '11:00 a.m. - 1:00 p.m.', '1:00 p.m. - 3:00 p.m.', '3:00 p.m. - 5:00 p.m.', '5:00 p.m. - 8:00 p.m.'], width=entry_width)
   entry_appointment_time.grid(row=1, column=3)
-
-  # label_appointment_date = tk.Label(clinic_frame, bg=bg_color, text='')
 
   label_preferred_notification = tk.Label(clinic_frame, bg=bg_color, text='Preferred Notification')
   label_preferred_notification.grid(row=2, column=0)
@@ -466,14 +470,110 @@ def schedule_appointment():
   entry_preferred_notification = ttk.Combobox(clinic_frame, value=['Email', 'SMS', 'Whatsapp'], width=entry_width)
   entry_preferred_notification.grid(row=2, column=1)
 
-  schedule_appointment_button = tk.Button(schedule_frame, text='Confirm and Submit Schedule', bg=btn_color, activebackground=btn_hover, padx=10, pady=10)
+  label_appointment_date = tk.Label(clinic_frame, bg=bg_color, text='Appointment Date')
+  label_appointment_date.grid(row=2, column=2)
+
+  # dates for appointment
+  cur_date = datetime.date.today()
+  cur_day = cur_date.day
+
+  cur_month = cur_date.month
+  cur_year = cur_date.year
+  
+  num_days_in_month = calendar.monthrange(cur_year, cur_month)[1]
+
+  dates_from_cur_month = [
+    datetime.date(cur_year, cur_month, day) for day in range(cur_day, num_days_in_month + 1)
+  ]
+
+  entry_appointment_date = ttk.Combobox(clinic_frame, value=dates_from_cur_month, width=entry_width)
+  entry_appointment_date.grid(row=2, column=3)
+
+  schedule_appointment_button = tk.Button(schedule_frame, text='Confirm and Submit Schedule', bg=btn_color, fg=bg_color, activebackground=btn_hover, padx=10, pady=10, activeforeground=bg_color, width=50 , command=lambda: validate_schedule())
   schedule_appointment_button.pack()
 
+  def validate_schedule():
+    user_schedule_data = {
+      'full_name': entry_name.get(),
+      'age': entry_age.get(),
+      'mail': entry_msg.get(),
+      'mobile_num': entry_phone.get(),
+      'appointment_type': entry_appointment_type.get(),
+      'appointment_time': entry_appointment_time.get(),
+      'appointment_date': entry_appointment_date.get(),
+      'notification': entry_preferred_notification.get()
+      }
+
+    user_schedule_entry = {
+      'full_name': entry_name,
+      'age': entry_age,
+      'mail': entry_msg,
+      'mobile_num': entry_phone,
+      'appointment_type': entry_appointment_type,
+      'appointment_time': entry_appointment_time,
+      'appointment_date': entry_appointment_date,
+      'notification': entry_preferred_notification
+      }
+        
+    for key, value in user_schedule_data.items():
+      if not(value):
+        messagebox.showerror('Entry Error', f'The {key} is empty')
+        return ''
+
+      if key == 'mobile_num' and (len(value) < 10 or len(value) > 15):
+        messagebox.showerror('Entry Error', f'Phone number must be between 10 and 15 characters.')
+        return ''
+
+      if key == 'appointment_type' and not(value in ['General Consultation', 'Specialist Visit', 'TeleHealth Consultation', 'Lab Testing/Imaging']):
+        messagebox.showerror('Entry Error', f'Provide a correct value at entry {key}')
+        return ''
+
+      if key == 'notification' and not(value == 'Email' or value == 'SMS' or value == 'Whatsapp'):
+        messagebox.showerror('Entry Error', 'Provide a correct value at entry {key}')
+        return ''
+      
+    try:
+      connect = mysql.connector.connect(host='localhost', password='', user='root', database='hospital_patient_data')
+      cursor = connect.cursor()
+
+      # CREATE TABLE
+      create_table = 'CREATE TABLE IF NOT EXISTS user_schedule(id_key INT PRIMARY KEY AUTO_INCREMENT, full_name TEXT, age INT, mail TEXT, mobile_number VARCHAR(15), appointment_type TEXT, appointment_time TEXT, appointment_date TEXT, notification TEXT)'
+      cursor.execute(create_table)
+
+      # Insert Schedule
+      insert_schedule = ''' insert into user_schedule(full_name, age, mail, mobile_number, appointment_type, appointment_time, appointment_date, notification) values(%s, %s, %s, %s, %s, %s, %s, %s)
+      '''
+
+      user_data = []
+      for key, value in user_schedule_data.items():
+        user_data.append(value)
+
+      # convert user_data list to a tuple
+      tuple(user_data)
+
+      cursor.execute(insert_schedule, user_data)
+      connect.commit()
+
+      messagebox.showinfo('Successful', 'Hurray! your apppoinment as been scheduled successfully')
+
+      # clear entry inputs of form
+      cmd.clear_input(user_schedule_entry)
+
+    except Error as e:
+      messagebox.showerror('Connection Error', f'There is an error connecting to the database: {e}')
+    finally:
+      if connect.is_connected():
+        connect.close()
+        cursor.close()
+
+  for child in schedule_frame.winfo_children():
+    child.pack_configure(padx=20, pady=15)
+
   for child in personal_info_frame.winfo_children():
-    child.grid_configure(padx=10, pady=5)
+    child.grid_configure(padx=10, pady=10)
 
   for child in clinic_frame.winfo_children():
-    child.grid_configure(padx=10, pady=5)
+    child.grid_configure(padx=10, pady=10)
 
 def display_appointment():
   bg_color = '#fff'
@@ -484,60 +584,31 @@ def display_appointment():
   label_title = tk.Label(schedule_frame, text='My Appointments', bg=bg_color)
   label_title.pack()
 
-def display_medical_records():
-  bg_color = '#fff'
-  
-  schedule_frame = tk.Frame(dashboard_main, bg=dashboard_main['bg'], width=dashboard_main['width'], height=dashboard_main['height'])
-  schedule_frame.place(relx=0.5, rely=0.5, anchor='center')
-  schedule_frame.propagate(flag=False)
+  try:
+    connect = mysql.connector.connect(host='localhost', password='', user='root', database='hospital_patient_data')
+    cursor = connect.cursor()
 
-  # past medical history frame
-  past_history_frame = tk.Frame(schedule_frame, bg='#FFFEFE', width=dashboard_main['width'])
-  past_history_frame.pack(anchor='w')
+    get_appointment = '''
+    SELECT * FROM user_schedule
+    '''
 
-  label_history_title = tk.Label(past_history_frame, text='PAST MEDICAL HISTORY', bg=bg_color, font=('Roboto', 14))
-  label_history_title.pack(anchor='w')
+    cursor.execute(get_appointment)
+    appointment_data = cursor.fetchall()
 
-  label_instruction = tk.Label(past_history_frame, text='Kindly check the boxes that apply to you', bg=bg_color)
-  label_instruction.pack(anchor='w')
+    for item in appointment_data:
+      label_appointment = tk.Label(schedule_frame, text=item, bg=bg_color)
+      label_appointment.pack()
 
-  # child frame of past medical hstory
-  history_disease_frame = tk.Frame(past_history_frame, bg='#fff')
-  history_disease_frame.pack(anchor='w')
+  except Error as e:
+    messagebox.showerror('Connection Error', f'There is an error connecting to the database: {e}')
 
-  hypertension_check = tk.Checkbutton(history_disease_frame, text='Hypertension', background=bg_color, activebackground=bg_color, highlightthickness=0, font=roboto_font)
-  hypertension_check.grid(row=0, column=0)
+  finally:
+    if connect.is_connected():
+      cursor.close()
+      connect.close()
 
-  epilepsy_check = tk.Checkbutton(history_disease_frame, text='Epilepsy', background=bg_color, activebackground=bg_color, highlightthickness=0, font=roboto_font)
-  epilepsy_check.grid(row=0, column=1)
-
-  asthma_check = tk.Checkbutton(history_disease_frame, text='Asthma', background=bg_color, activebackground=bg_color, highlightthickness=0, font=roboto_font)
-  asthma_check.grid(row=0, column=2)
-
-  diabetes_check = tk.Checkbutton(history_disease_frame, text='Diabetes', background=bg_color, activebackground=bg_color, highlightthickness=0, font=roboto_font)
-  diabetes_check.grid(row=0, column=3)
-
-  blood_check = tk.Checkbutton(history_disease_frame, text='Blood Transfusion', background=bg_color, activebackground=bg_color, highlightthickness=0, font=roboto_font)
-  blood_check.grid(row=0, column=3)
-
-
-  # surgical history
-  surgical_history_frame = tk.Frame(schedule_frame, bg='#FFFEFE', width=dashboard_main['width'])
-  surgical_history_frame.pack(anchor='w')
-
-  label_surgical_title = tk.Label(surgical_history_frame, text='SURGICAL HISTORY', bg=bg_color, font=('Roboto', 14))
-  label_surgical_title.pack(anchor='w')
-
-  label_instruction = tk.Label(surgical_history_frame, text='Kindly select yes or no from the dropdown', bg=bg_color)
-  label_instruction.pack(anchor='w')
-
-
-  for child_item in schedule_frame.winfo_children():
-    child_item.pack_configure(padx=30, pady=10)
-
-  for child_item in history_disease_frame.winfo_children():
-    child_item.grid_configure(padx=10, pady=10)
-
+  for child in schedule_frame.winfo_children():
+    child.pack_configure(padx=10, pady=10)
 
 def display_profile():
   bg_color = '#fff'
@@ -585,9 +656,6 @@ def patient_window():
 
   btn_appointment = tk.Button(dashboard_navigation, text='My Appointments', width=btn_width, fg=bg_color, bg=btn_color, highlightbackground=btn_color, highlightcolor=btn_color, activebackground=btn_hover, activeforeground=bg_color, pady=btn_padh, font=roboto_font, command=lambda: display_appointment())
   btn_appointment.pack()
-
-  btn_records = tk.Button(dashboard_navigation, text='Medical Records', width=btn_width, fg=bg_color, bg=btn_color, highlightbackground=btn_color, highlightcolor=btn_color, activebackground=btn_hover, activeforeground=bg_color, pady=btn_padh, font=roboto_font, command=lambda: display_medical_records())
-  btn_records.pack()
 
   btn_profile = tk.Button(dashboard_navigation, text='Profile Settings', width=btn_width, fg=bg_color, bg=btn_color, highlightbackground=btn_color, highlightcolor=btn_color, activebackground=btn_hover, activeforeground=bg_color, pady=btn_padh, font=roboto_font, command=lambda: display_profile())
   btn_profile.pack()
