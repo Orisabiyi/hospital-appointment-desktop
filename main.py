@@ -1,6 +1,6 @@
-import os
+import re
 import tkinter as tk
-from tkinter import messagebox, filedialog, ttk;
+from tkinter import messagebox, ttk;
 from PIL import Image, ImageTk, ImageDraw
 
 import datetime
@@ -16,6 +16,13 @@ import os
 # os.environ['']
 # fonts
 roboto_font = ("Roboto", 12, "normal")
+
+def validate_email(email):
+    regex = '^[a-z0-9]+[\._]?[a-z0-9]+[@]\w+[.]\w{2,3}$'
+    if(re.search(regex,email)):  
+        return True  
+    else:  
+        return False
 
 def main():
   # creating root window
@@ -51,6 +58,7 @@ def validate_login():
     connect = mysql.connector.connect(host='localhost', password='', user='root', database='hospital_patient_data')
     cursor = connect.cursor()
 
+    # fetch exsiting user from databse
     get_user = '''
     SELECT * FROM user
     WHERE mail = %s AND password = %s
@@ -89,7 +97,7 @@ def validate_login():
       return ''
     
   except Error as e:
-    print('Error:', e)
+    messagebox.showerror('Connection Error', 'There is an error connecting to the database')
 
   finally:
     if connect.is_connected():
@@ -148,7 +156,7 @@ def login_user_account():
 
   label_password = tk.Label(container, text='Password', bg=login_frameholder['bg'], font=roboto_font)
   global entry_password
-  entry_password = tk.Entry(container, width=widget_width, highlightthickness=0, font=roboto_font)
+  entry_password = tk.Entry(container, width=widget_width, highlightthickness=0, font=roboto_font, show='*')
 
   label_password.grid(row=2, column=0)
   entry_password.grid(row=3, column=0)
@@ -189,6 +197,11 @@ def validate_create_account(value_arr):
     if value[0] == 'genotype' and not (value[1] == 'AA' or value[1] == 'AS' or value[1] == 'SS'):
       messagebox.showerror('Fill the genotype entry', 'Choose an option of AA, AS, or SS from the dropdown')
       return ''
+
+    if value[0] == 'mail':
+      if not(validate_email(value[1])):
+        messagebox.showerror('Invalid Email', 'The email you entered is not valid.')
+        return ''
     
     if value[0] == 'password':
       pwd = value[1]
@@ -222,7 +235,6 @@ def validate_create_account(value_arr):
 
     user_data.pop(-3)
     tuple(user_data)
-    print(user_data)
 
     cursor.execute(insert_user, user_data)
     connect.commit()
@@ -320,13 +332,13 @@ def create_user_account():
   entry_mail.grid(row=10, column=1)
 
   label_password = tk.Label(container, text='Password', bg=user_frame['bg'], width=widget_width, font=roboto_font)
-  entry_password = tk.Entry(container, width=widget_width, font=roboto_font)
+  entry_password = tk.Entry(container, width=widget_width, font=roboto_font, show='*')
 
   label_password.grid(row=11, column=0)
   entry_password.grid(row=12, column=0)
 
   label_confirm = tk.Label(container, text='Confirm Password', bg=user_frame['bg'], width=widget_width, font=roboto_font)
-  entry_confirm = tk.Entry(container, width=widget_width, font=roboto_font)
+  entry_confirm = tk.Entry(container, width=widget_width, font=roboto_font, show='*')
 
   label_confirm.grid(row=11, column=1)
   entry_confirm.grid(row=12, column=1)
@@ -455,7 +467,7 @@ def schedule_appointment():
   label_appointment_type = tk.Label(clinic_frame, bg=bg_color, text='Appointment Type')
   label_appointment_type.grid(row=1, column=0)
 
-  entry_appointment_type = ttk.Combobox(clinic_frame, value=['General Consultation', 'Specialist Visit', 'TeleHealth Consultation', 'Lab Test/Imaging'], width=entry_width)
+  entry_appointment_type = ttk.Combobox(clinic_frame, value=['General Consultation', 'Specialist Visit', 'TeleHealth Consultation'], width=entry_width)
   entry_appointment_type.grid(row=1, column=1)
 
   label_appointment_time = tk.Label(clinic_frame, bg=bg_color, text='Appointment Time')
@@ -493,6 +505,7 @@ def schedule_appointment():
   schedule_appointment_button.pack()
 
   def validate_schedule():
+    global user_schedule_data
     user_schedule_data = {
       'full_name': entry_name.get(),
       'age': entry_age.get(),
@@ -524,7 +537,7 @@ def schedule_appointment():
         messagebox.showerror('Entry Error', f'Phone number must be between 10 and 15 characters.')
         return ''
 
-      if key == 'appointment_type' and not(value in ['General Consultation', 'Specialist Visit', 'TeleHealth Consultation', 'Lab Testing/Imaging']):
+      if key == 'appointment_type' and not(value == 'General Consultation' or value == 'Specialist Visit' or value == 'TeleHealth Consultation'):
         messagebox.showerror('Entry Error', f'Provide a correct value at entry {key}')
         return ''
 
@@ -537,7 +550,7 @@ def schedule_appointment():
       cursor = connect.cursor()
 
       # CREATE TABLE
-      create_table = 'CREATE TABLE IF NOT EXISTS user_schedule(id_key INT PRIMARY KEY AUTO_INCREMENT, full_name TEXT, age INT, mail TEXT, mobile_number VARCHAR(15), appointment_type TEXT, appointment_time TEXT, appointment_date TEXT, notification TEXT)'
+      create_table = 'CREATE TABLE IF NOT EXISTS user_schedule(id_key INT PRIMARY KEY AUTO_INCREMENT, full_name TEXT, age INT, mail TEXT, mobile_number VARCHAR(15), appointment_type TEXT, appointmen_time TEXT, appointment_date TEXT, notification TEXT)'
       cursor.execute(create_table)
 
       # Insert Schedule
@@ -577,12 +590,12 @@ def schedule_appointment():
 
 def display_appointment():
   bg_color = '#fff'
-  schedule_frame = tk.Frame(dashboard_main, bg=dashboard_main['bg'], width=dashboard_main['width'], height=dashboard_main['height'])
+  schedule_frame = tk.Frame(dashboard_main, bg=dashboard_main['bg'], width=dashboard_main['width'], height=dashboard_main['height'], padx=10, pady=10)
   schedule_frame.place(relx=0.5, rely=0.5, anchor='center')
   schedule_frame.propagate(flag=False)
 
-  label_title = tk.Label(schedule_frame, text='My Appointments', bg=bg_color)
-  label_title.pack()
+  label_title = tk.Label(schedule_frame, text='My Appointments', bg=bg_color, font=('roboto', 14, 'bold'))
+  label_title.pack(anchor='w')
 
   try:
     connect = mysql.connector.connect(host='localhost', password='', user='root', database='hospital_patient_data')
@@ -590,14 +603,34 @@ def display_appointment():
 
     get_appointment = '''
     SELECT * FROM user_schedule
+    where mail = %s
     '''
+    cur_user_mail = cur_user['mail']
 
-    cursor.execute(get_appointment)
+    cursor.execute(get_appointment, (cur_user_mail, ))
     appointment_data = cursor.fetchall()
 
     for item in appointment_data:
-      label_appointment = tk.Label(schedule_frame, text=item, bg=bg_color)
-      label_appointment.pack()
+      appointee_frame = tk.Frame(schedule_frame, bg=bg_color)
+      appointee_frame.pack(anchor='w')
+
+      label_appointee = tk.Label(appointee_frame, text=f'Name of Appointee: {item[1]}', bg=bg_color, justify='left')
+      label_appointee.grid(row=0, column=0, sticky='w')
+
+      label_appointment_type = tk.Label(appointee_frame, text=f'Appointment Type: {item[-4]}', bg=bg_color, justify='left')
+      label_appointment_type.grid(row=0, column=1, sticky='w')
+
+      label_appointment_time = tk.Label(appointee_frame, text=f'Appointment Time: {item[-3]}', bg=bg_color, justify='left')
+      label_appointment_time.grid(row=0, column=2, sticky='w')
+
+      label_appointment_date = tk.Label(appointee_frame, text=f'Appointment Date: {item[-2]}', bg=bg_color, justify='left')
+      label_appointment_date.grid(row=1, column=0, sticky='w')
+
+      label_appointment_notification = tk.Label(appointee_frame, text=f'Notification: {item[-1]}', bg=bg_color, justify='left')
+      label_appointment_notification.grid(row=1, column=1, sticky='w')
+
+      for child in appointee_frame.winfo_children():
+        child.grid_configure(padx=10, pady=10)
 
   except Error as e:
     messagebox.showerror('Connection Error', f'There is an error connecting to the database: {e}')
@@ -610,14 +643,15 @@ def display_appointment():
   for child in schedule_frame.winfo_children():
     child.pack_configure(padx=10, pady=10)
 
-def display_profile():
-  bg_color = '#fff'
-  schedule_frame = tk.Frame(dashboard_main, bg=dashboard_main['bg'], width=dashboard_main['width'], height=dashboard_main['height'])
-  schedule_frame.place(relx=0.5, rely=0.5, anchor='center')
-  schedule_frame.propagate(flag=False)
+def logout():
+  # the dialog window to show yes or no
+  response = messagebox.askyesno('Logout', 'Are you sure you want to logout?')
 
-  label_title = tk.Label(schedule_frame, text='Profile Settings', bg=bg_color)
-  label_title.pack()
+  if response:
+    login_user_account()
+    dashboard_frame.forget()
+  else:
+    return ''
 
 def patient_window():
   bg_color = '#fff'
@@ -635,6 +669,7 @@ def patient_window():
   btn_padh = 15
   image_path = "asset/doctor.jpeg"
 
+  global dashboard_frame
   dashboard_frame = tk.Frame(root, bg=bg_color, width=width, height=height)
   dashboard_frame.pack()
 
@@ -657,7 +692,7 @@ def patient_window():
   btn_appointment = tk.Button(dashboard_navigation, text='My Appointments', width=btn_width, fg=bg_color, bg=btn_color, highlightbackground=btn_color, highlightcolor=btn_color, activebackground=btn_hover, activeforeground=bg_color, pady=btn_padh, font=roboto_font, command=lambda: display_appointment())
   btn_appointment.pack()
 
-  btn_profile = tk.Button(dashboard_navigation, text='Profile Settings', width=btn_width, fg=bg_color, bg=btn_color, highlightbackground=btn_color, highlightcolor=btn_color, activebackground=btn_hover, activeforeground=bg_color, pady=btn_padh, font=roboto_font, command=lambda: display_profile())
+  btn_profile = tk.Button(dashboard_navigation, text='Logout', width=btn_width, fg=bg_color, bg=btn_color, highlightbackground=btn_color, highlightcolor=btn_color, activebackground=btn_hover, activeforeground=bg_color, pady=btn_padh, font=roboto_font, command=lambda: logout())
   btn_profile.pack()
 
   for widget in dashboard_navigation.winfo_children():
